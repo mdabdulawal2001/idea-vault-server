@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const { ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const app = express();
@@ -31,7 +32,7 @@ async function run() {
 
     // ================= ROUTES =================
 
-    // Sample GET route
+    // Sample GET routes
     app.get("/ideas", async (req, res) => {
       try {
         const result = await ideasCollection.find().toArray();
@@ -40,6 +41,32 @@ async function run() {
         res.status(500).send({ message: "Error fetching data", error });
       }
     });
+
+    
+    // get route by id
+    app.get("/ideas/:id", async (req, res) => {
+      const id = req.params.id;
+
+      try {
+        const query = { _id: new ObjectId(id) };
+        const result = await ideasCollection.findOne(query);
+
+        if (!result) {
+          return res.status(404).send({ message: "Idea not found" });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res
+          .status(500)
+          .send({
+            message: "Error fetching idea or invalid ID",
+            error: error.message,
+          });
+      }
+    });
+
+
 
     // Root API
     app.get("/", (req, res) => {
