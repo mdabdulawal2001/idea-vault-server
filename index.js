@@ -10,7 +10,6 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-
 const uri = process.env.MONGODB_URI;
 
 const client = new MongoClient(uri, {
@@ -34,7 +33,7 @@ async function run() {
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
 
-    // ================= HELPER FUNCTION =================
+    //  HELPER FUNCTION
     async function convertStringDatesToISODate() {
       try {
         const result = await ideasCollection.updateMany(
@@ -163,6 +162,25 @@ async function run() {
       } catch (error) {
         res.status(500).send({
           message: "Error fetching idea",
+          error: error.message,
+        });
+      }
+    });
+
+    // get trending ideas
+    app.get("/trending", async (req, res) => {
+      try {
+        const result = await ideasCollection
+          .find()
+          .sort({ createdAt: -1 })
+          .limit(6)
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching trending ideas:", error);
+        res.status(500).send({
+          message: "Error fetching trending ideas",
           error: error.message,
         });
       }
