@@ -192,8 +192,7 @@ async function run() {
       }
     });
 
-  
-    // 3. Post new idea
+    // Post new idea
     app.post("/ideas", async (req, res) => {
       try {
         const {
@@ -293,6 +292,105 @@ async function run() {
       }
     });
 
+    // Patch current idea
+    app.patch("/ideas/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const {
+          title,
+          shortDescription,
+          detailedDescription,
+          category,
+          tags,
+          imageURL,
+          estimatedBudget,
+          targetAudience,
+          problemStatement,
+          proposedSolution,
+        } = req.body;
+
+        // ================= VALIDATION =================
+
+        if (
+          !title ||
+          !shortDescription ||
+          !detailedDescription ||
+          !category ||
+          !targetAudience ||
+          !problemStatement ||
+          !proposedSolution
+        ) {
+          return res.status(400).send({
+            success: false,
+            message: "Required fields are missing",
+          });
+        }
+
+        // ================= UPDATE DATA =================
+
+        const updatedIdea = {
+          title: title.trim(),
+          shortDescription: shortDescription.trim(),
+          detailedDescription: detailedDescription.trim(),
+          category: category.trim(),
+
+          tags: Array.isArray(tags) ? tags : [],
+
+          imageURL: imageURL?.trim() || "",
+
+          estimatedBudget:
+            estimatedBudget === null ||
+            estimatedBudget === "" ||
+            estimatedBudget === undefined
+              ? null
+              : Number(estimatedBudget),
+
+          targetAudience: targetAudience.trim(),
+          problemStatement: problemStatement.trim(),
+          proposedSolution: proposedSolution.trim(),
+
+          updatedAt: new Date(),
+        };
+
+        // ================= UPDATE =================
+
+        const result = await ideasCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: updatedIdea,
+          },
+        );
+
+        // ================= NOT FOUND =================
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Idea not found",
+          });
+        }
+
+        // ================= SUCCESS =================
+
+        res.status(200).send({
+          success: true,
+          message: "Idea updated successfully",
+          idea: {
+            _id: id,
+            ...updatedIdea,
+          },
+        });
+      } catch (error) {
+        console.error("Error updating idea:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Error updating idea",
+          error: error.message,
+        });
+      }
+    });
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
