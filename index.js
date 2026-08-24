@@ -79,6 +79,7 @@ async function run() {
         category = "",
         fromDate = "",
         toDate = "",
+        authorId = "",
       } = req.query;
 
       try {
@@ -95,6 +96,11 @@ async function run() {
         // Filter by category
         if (category) {
           query.category = category;
+        }
+
+        // Filter by authorId
+        if (authorId) {
+          query.authorId = authorId;
         }
 
         // Filter by date range
@@ -186,26 +192,107 @@ async function run() {
       }
     });
 
+  
     // 3. Post new idea
     app.post("/ideas", async (req, res) => {
       try {
-        const newIdeaData = req.body;
+        const {
+          title,
+          shortDescription,
+          detailedDescription,
+          category,
+          tags,
+          imageURL,
+          estimatedBudget,
+          targetAudience,
+          problemStatement,
+          proposedSolution,
+          authorId,
+          authorName,
+          authorPhoto,
+        } = req.body;
+
+        // ================= VALIDATION =================
+
+        if (
+          !title ||
+          !shortDescription ||
+          !detailedDescription ||
+          !category ||
+          !targetAudience ||
+          !problemStatement ||
+          !proposedSolution ||
+          !authorId
+        ) {
+          return res.status(400).send({
+            message: "Required fields are missing",
+          });
+        }
+
+        // ================= NEW IDEA =================
 
         const newIdea = {
-          ...newIdeaData,
+          title: title.trim(),
+
+          shortDescription: shortDescription.trim(),
+
+          detailedDescription: detailedDescription.trim(),
+
+          category: category.trim(),
+
+          tags: Array.isArray(tags) ? tags : [],
+
+          imageURL: imageURL?.trim() || "",
+
+          estimatedBudget:
+            estimatedBudget === null ||
+            estimatedBudget === "" ||
+            estimatedBudget === undefined
+              ? null
+              : Number(estimatedBudget),
+
+          targetAudience: targetAudience.trim(),
+
+          problemStatement: problemStatement.trim(),
+
+          proposedSolution: proposedSolution.trim(),
+
+          // ================= AUTHOR INFO =================
+
+          authorId: authorId,
+
+          authorName: authorName?.trim() || "Unknown User",
+
+          authorPhoto: authorPhoto || "",
+
+          // ================= TIMESTAMPS =================
+
           createdAt: new Date(),
+
           updatedAt: new Date(),
         };
 
+        // ================= INSERT =================
+
         const result = await ideasCollection.insertOne(newIdea);
-        res.status(201).send(result);
+
+        res.status(201).send({
+          success: true,
+          message: "Idea published successfully",
+          insertedId: result.insertedId,
+          idea: newIdea,
+        });
       } catch (error) {
+        console.error("Error creating idea:", error);
+
         res.status(500).send({
+          success: false,
           message: "Error creating idea",
           error: error.message,
         });
       }
     });
+
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
