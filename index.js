@@ -214,16 +214,17 @@ async function run() {
         // ================= VALIDATION =================
 
         if (
-          !title ||
-          !shortDescription ||
-          !detailedDescription ||
-          !category ||
-          !targetAudience ||
-          !problemStatement ||
-          !proposedSolution ||
+          !title?.trim() ||
+          !shortDescription?.trim() ||
+          !detailedDescription?.trim() ||
+          !category?.trim() ||
+          !targetAudience?.trim() ||
+          !problemStatement?.trim() ||
+          !proposedSolution?.trim() ||
           !authorId
         ) {
           return res.status(400).send({
+            success: false,
             message: "Required fields are missing",
           });
         }
@@ -232,11 +233,8 @@ async function run() {
 
         const newIdea = {
           title: title.trim(),
-
           shortDescription: shortDescription.trim(),
-
           detailedDescription: detailedDescription.trim(),
-
           category: category.trim(),
 
           tags: Array.isArray(tags) ? tags : [],
@@ -251,23 +249,18 @@ async function run() {
               : Number(estimatedBudget),
 
           targetAudience: targetAudience.trim(),
-
           problemStatement: problemStatement.trim(),
-
           proposedSolution: proposedSolution.trim(),
 
           // ================= AUTHOR INFO =================
 
           authorId: authorId,
-
           authorName: authorName?.trim() || "Unknown User",
-
           authorPhoto: authorPhoto || "",
 
           // ================= TIMESTAMPS =================
 
           createdAt: new Date(),
-
           updatedAt: new Date(),
         };
 
@@ -279,7 +272,10 @@ async function run() {
           success: true,
           message: "Idea published successfully",
           insertedId: result.insertedId,
-          idea: newIdea,
+          idea: {
+            ...newIdea,
+            _id: result.insertedId,
+          },
         });
       } catch (error) {
         console.error("Error creating idea:", error);
@@ -297,6 +293,15 @@ async function run() {
       try {
         const { id } = req.params;
 
+        // ================= ID VALIDATION =================
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid idea ID",
+          });
+        }
+
         const {
           title,
           shortDescription,
@@ -313,17 +318,31 @@ async function run() {
         // ================= VALIDATION =================
 
         if (
-          !title ||
-          !shortDescription ||
-          !detailedDescription ||
-          !category ||
-          !targetAudience ||
-          !problemStatement ||
-          !proposedSolution
+          !title?.trim() ||
+          !shortDescription?.trim() ||
+          !detailedDescription?.trim() ||
+          !category?.trim() ||
+          !targetAudience?.trim() ||
+          !problemStatement?.trim() ||
+          !proposedSolution?.trim()
         ) {
           return res.status(400).send({
             success: false,
             message: "Required fields are missing",
+          });
+        }
+
+        // ================= BUDGET VALIDATION =================
+
+        if (
+          estimatedBudget !== null &&
+          estimatedBudget !== "" &&
+          estimatedBudget !== undefined &&
+          Number.isNaN(Number(estimatedBudget))
+        ) {
+          return res.status(400).send({
+            success: false,
+            message: "Estimated budget must be a valid number",
           });
         }
 
@@ -356,7 +375,9 @@ async function run() {
         // ================= UPDATE =================
 
         const result = await ideasCollection.updateOne(
-          { _id: new ObjectId(id) },
+          {
+            _id: new ObjectId(id),
+          },
           {
             $set: updatedIdea,
           },
@@ -391,6 +412,54 @@ async function run() {
         });
       }
     });
+
+    // Delete current idea
+    app.delete("/ideas/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        // ================= ID VALIDATION =================
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid idea ID",
+          });
+        }
+
+        // ================= DELETE =================
+
+        const result = await ideasCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        // ================= NOT FOUND =================
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Idea not found",
+          });
+        }
+
+        // ================= SUCCESS =================
+
+        res.status(200).send({
+          success: true,
+          message: "Idea deleted successfully",
+          deletedId: id,
+        });
+      } catch (error) {
+        console.error("Error deleting idea:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Error deleting idea",
+          error: error.message,
+        });
+      }
+    });
+    
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
