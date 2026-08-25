@@ -28,6 +28,7 @@ async function run() {
     // Database & Collections
     const db = client.db("ideaVaultDB");
     const ideasCollection = db.collection("ideas");
+    const commentsCollection = db.collection("comments");
 
     // Send a ping to confirm connection
     await client.db("admin").command({ ping: 1 });
@@ -72,7 +73,7 @@ async function run() {
       res.send("IdeaVault Server is running...");
     });
 
-    // 1. Get ideas with Search, Filter & Date Range
+    // Get ideas with Search, Filter & Date Range
     app.get("/ideas", async (req, res) => {
       const {
         search = "",
@@ -131,6 +132,264 @@ async function run() {
       }
     });
 
+    // post comments
+    app.post("/comments", async (req, res) => {
+      try {
+        const { ideaId, ideaTitle, userId, userName, userImage, text } =
+          req.body;
+
+        // ================= VALIDATION =================
+
+        if (!ideaId || !userId || !text?.trim()) {
+          return res.status(400).send({
+            success: false,
+            message: "Required fields are missing",
+          });
+        }
+
+        // ================= IDEA ID VALIDATION =================
+
+        if (!ObjectId.isValid(ideaId)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid idea ID",
+          });
+        }
+
+        // ================= NEW COMMENT =================
+
+        const newComment = {
+          ideaId: new ObjectId(ideaId),
+
+          ideaTitle: ideaTitle?.trim() || "",
+
+          userId,
+          userName: userName?.trim() || "Unknown User",
+          userImage: userImage || "",
+
+          text: text.trim(),
+
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // ================= INSERT =================
+
+        const result = await commentsCollection.insertOne(newComment);
+
+        // ================= SUCCESS =================
+
+        res.status(201).send({
+          success: true,
+          message: "Comment posted successfully",
+          comment: {
+            ...newComment,
+            _id: result.insertedId,
+          },
+        });
+      } catch (error) {
+        console.error("Error creating comment:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Error creating comment",
+          error: error.message,
+        });
+      }
+    });
+
+    // get comments
+    app.get("/comments/idea/:ideaId", async (req, res) => {
+      try {
+        const { ideaId } = req.params;
+
+        // ================= ID VALIDATION =================
+
+        if (!ObjectId.isValid(ideaId)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid idea ID",
+          });
+        }
+
+        // ================= GET COMMENTS =================
+
+        const comments = await commentsCollection
+          .find({
+            ideaId: new ObjectId(ideaId),
+          })
+          .sort({
+            createdAt: -1,
+          })
+          .toArray();
+
+        // ================= SUCCESS =================
+
+        res.status(200).send({
+          success: true,
+          comments,
+        });
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Error fetching comments",
+          error: error.message,
+        });
+      }
+    });
+
+    // GET COMMENTS BY USER ID 
+
+    app.get("/comments/user/:userId", async (req, res) => {
+      try {
+        const { userId } = req.params;
+
+        // ================= USER ID VALIDATION =================
+
+        if (!userId) {
+          return res.status(400).send({
+            success: false,
+            message: "User ID is required",
+          });
+        }
+
+        // ================= GET USER COMMENTS =================
+
+        const comments = await commentsCollection
+          .find({
+            userId: userId,
+          })
+          .sort({
+            createdAt: -1,
+          })
+          .toArray();
+
+        // ================= SUCCESS =================
+
+        res.status(200).send({
+          success: true,
+          comments,
+        });
+      } catch (error) {
+        console.error("Error fetching user comments:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Error fetching user comments",
+          error: error.message,
+        });
+      }
+    });
+
+    // patch comments
+    app.patch("/comments/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { text } = req.body;
+
+        // ================= ID VALIDATION =================
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid comment ID",
+          });
+        }
+
+        // ================= BODY VALIDATION =================
+
+        if (!text?.trim()) {
+          return res.status(400).send({
+            success: false,
+            message: "Comment text is required",
+          });
+        }
+
+        // ================= UPDATE COMMENT =================
+
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            text: text.trim(),
+            updatedAt: new Date(),
+          },
+        };
+
+        const result = await commentsCollection.updateOne(filter, updateDoc);
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Comment not found",
+          });
+        }
+
+        // Updated comment payload fetch
+        const updatedComment = await commentsCollection.findOne(filter);
+
+        // ================= SUCCESS =================
+
+        res.status(200).send({
+          success: true,
+          message: "Comment updated successfully",
+          comment: updatedComment,
+        });
+      } catch (error) {
+        console.error("Update comment error:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to update comment",
+          error: error.message,
+        });
+      }
+    });
+
+    // delete comments
+    app.delete("/comments/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        // ================= ID VALIDATION =================
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid comment ID",
+          });
+        }
+
+        // ================= DELETE COMMENT =================
+
+        const filter = { _id: new ObjectId(id) };
+        const result = await commentsCollection.deleteOne(filter);
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Comment not found",
+          });
+        }
+
+        // ================= SUCCESS =================
+
+        res.status(200).send({
+          success: true,
+          message: "Comment deleted successfully",
+        });
+      } catch (error) {
+        console.error("Delete comment error:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete comment",
+          error: error.message,
+        });
+      }
+    });
+
     // category route
     app.get("/idea-categories", async (req, res) => {
       try {
@@ -147,7 +406,7 @@ async function run() {
       }
     });
 
-    // 2. Get single idea by ID
+    // Get single idea by ID
     app.get("/ideas/:id", async (req, res) => {
       const id = req.params.id;
 
@@ -459,7 +718,6 @@ async function run() {
         });
       }
     });
-    
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
