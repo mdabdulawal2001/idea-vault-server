@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 require("dotenv").config();
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
+const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -22,27 +24,46 @@ const client = new MongoClient(uri, {
 });
 
 // Middleware for verifying token
+
+const JWKS = createRemoteJWKSet(new URL(`${BETTER_AUTH_URL}/api/auth/jwks`));
+
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization || req.headers.Authorization;
 
-  // console.log("Backend Received Header:", authHeader);
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return res.status(401).json({
       success: false,
-      message: "Authorization header missing or invalid format",
+      message: "Authorization token is required",
     });
   }
 
   const token = authHeader.split(" ")[1];
-  console.log("Extracted Token:", token);
 
   try {
-    // JWT/Better Auth Verification Logic
-    // req.user = decoded;
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: BETTER_AUTH_URL,
+      audience: BETTER_AUTH_URL,
+    });
+
+    if (!payload?.sub) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token payload",
+      });
+    }
+
+    req.user = {
+      id: payload.sub,
+      ...payload,
+    };
     next();
   } catch (error) {
-    return res.status(403).json({ success: false, message: "Invalid Token" });
+    console.error("JWT Verification Error:", error);
+
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
   }
 };
 
@@ -159,21 +180,18 @@ async function run() {
     });
 
     // post comments
-    app.post("/comments", async (req, res) => {
+    app.post("/comments", verifyToken, async (req, res) => {
       try {
-        const { ideaId, ideaTitle, userId, userName, userImage, text } =
-          req.body;
+        const { ideaId, ideaTitle, userName, userImage, text } = req.body;
 
-        // ================= VALIDATION =================
+        const userId = req.user.sub;
 
-        if (!ideaId || !userId || !text?.trim()) {
+        if (!ideaId || !text?.trim()) {
           return res.status(400).send({
             success: false,
             message: "Required fields are missing",
           });
         }
-
-        // ================= IDEA ID VALIDATION =================
 
         if (!ObjectId.isValid(ideaId)) {
           return res.status(400).send({
@@ -182,14 +200,12 @@ async function run() {
           });
         }
 
-        // ================= NEW COMMENT =================
-
         const newComment = {
           ideaId: new ObjectId(ideaId),
-
           ideaTitle: ideaTitle?.trim() || "",
 
           userId,
+
           userName: userName?.trim() || "Unknown User",
           userImage: userImage || "",
 
@@ -199,11 +215,7 @@ async function run() {
           updatedAt: new Date(),
         };
 
-        // ================= INSERT =================
-
         const result = await commentsCollection.insertOne(newComment);
-
-        // ================= SUCCESS =================
 
         res.status(201).send({
           success: true,
@@ -268,31 +280,14 @@ async function run() {
 
     // GET COMMENTS BY USER ID
 
-    app.get("/comments/user/:userId", async (req, res) => {
+    app.get("/comments/me", verifyToken, async (req, res) => {
       try {
-        const { userId } = req.params;
-
-        // ================= USER ID VALIDATION =================
-
-        if (!userId) {
-          return res.status(400).send({
-            success: false,
-            message: "User ID is required",
-          });
-        }
-
-        // ================= GET USER COMMENTS =================
+        const userId = req.user.sub;
 
         const comments = await commentsCollection
-          .find({
-            userId: userId,
-          })
-          .sort({
-            createdAt: -1,
-          })
+          .find({ userId })
+          .sort({ createdAt: -1 })
           .toArray();
-
-        // ================= SUCCESS =================
 
         res.status(200).send({
           success: true,
@@ -304,18 +299,15 @@ async function run() {
         res.status(500).send({
           success: false,
           message: "Error fetching user comments",
-          error: error.message,
         });
       }
     });
 
     // patch comments
-    app.patch("/comments/:id", async (req, res) => {
+    app.patch("/comments/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
         const { text } = req.body;
-
-        // ================= ID VALIDATION =================
 
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({
@@ -324,8 +316,6 @@ async function run() {
           });
         }
 
-        // ================= BODY VALIDATION =================
-
         if (!text?.trim()) {
           return res.status(400).send({
             success: false,
@@ -333,9 +323,13 @@ async function run() {
           });
         }
 
-        // ================= UPDATE COMMENT =================
+        const userId = req.user.sub;
 
-        const filter = { _id: new ObjectId(id) };
+        const filter = {
+          _id: new ObjectId(id),
+          userId,
+        };
+
         const updateDoc = {
           $set: {
             text: text.trim(),
@@ -348,14 +342,11 @@ async function run() {
         if (result.matchedCount === 0) {
           return res.status(404).send({
             success: false,
-            message: "Comment not found",
+            message: "Comment not found or you are not the owner",
           });
         }
 
-        // Updated comment payload fetch
         const updatedComment = await commentsCollection.findOne(filter);
-
-        // ================= SUCCESS =================
 
         res.status(200).send({
           success: true,
@@ -374,11 +365,9 @@ async function run() {
     });
 
     // delete comments
-    app.delete("/comments/:id", async (req, res) => {
+    app.delete("/comments/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
-
-        // ================= ID VALIDATION =================
 
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({
@@ -387,19 +376,21 @@ async function run() {
           });
         }
 
-        // ================= DELETE COMMENT =================
+        const userId = req.user.sub;
 
-        const filter = { _id: new ObjectId(id) };
+        const filter = {
+          _id: new ObjectId(id),
+          userId,
+        };
+
         const result = await commentsCollection.deleteOne(filter);
 
         if (result.deletedCount === 0) {
           return res.status(404).send({
             success: false,
-            message: "Comment not found",
+            message: "Comment not found or you are not the owner",
           });
         }
-
-        // ================= SUCCESS =================
 
         res.status(200).send({
           success: true,
@@ -478,7 +469,7 @@ async function run() {
     });
 
     // Post new idea
-    app.post("/ideas", async (req, res) => {
+    app.post("/ideas", verifyToken, async (req, res) => {
       try {
         const {
           title,
@@ -491,11 +482,10 @@ async function run() {
           targetAudience,
           problemStatement,
           proposedSolution,
-          authorId,
           authorName,
           authorPhoto,
         } = req.body;
-
+        const authorId = req.user.sub;
         // ================= VALIDATION =================
 
         if (
@@ -574,10 +564,10 @@ async function run() {
     });
 
     // Patch current idea
-    app.patch("/ideas/:id", async (req, res) => {
+    app.patch("/ideas/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
-
+        const userId = req.user.sub;
         // ================= ID VALIDATION =================
 
         if (!ObjectId.isValid(id)) {
@@ -662,6 +652,7 @@ async function run() {
         const result = await ideasCollection.updateOne(
           {
             _id: new ObjectId(id),
+            authorId: userId,
           },
           {
             $set: updatedIdea,
@@ -699,10 +690,10 @@ async function run() {
     });
 
     // Delete current idea
-    app.delete("/ideas/:id", async (req, res) => {
+    app.delete("/ideas/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
-
+        const userId = req.user.sub;
         // ================= ID VALIDATION =================
 
         if (!ObjectId.isValid(id)) {
@@ -716,6 +707,7 @@ async function run() {
 
         const result = await ideasCollection.deleteOne({
           _id: new ObjectId(id),
+          authorId: userId,
         });
 
         // ================= NOT FOUND =================
