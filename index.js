@@ -8,6 +8,7 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
+
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
@@ -19,6 +20,31 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+// Middleware for verifying token
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+
+  // console.log("Backend Received Header:", authHeader);
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      success: false,
+      message: "Authorization header missing or invalid format",
+    });
+  }
+
+  const token = authHeader.split(" ")[1];
+  console.log("Extracted Token:", token);
+
+  try {
+    // JWT/Better Auth Verification Logic
+    // req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ success: false, message: "Invalid Token" });
+  }
+};
 
 async function run() {
   try {
@@ -240,7 +266,7 @@ async function run() {
       }
     });
 
-    // GET COMMENTS BY USER ID 
+    // GET COMMENTS BY USER ID
 
     app.get("/comments/user/:userId", async (req, res) => {
       try {
@@ -407,7 +433,7 @@ async function run() {
     });
 
     // Get single idea by ID
-    app.get("/ideas/:id", async (req, res) => {
+    app.get("/ideas/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
 
       // Validate ObjectId format
