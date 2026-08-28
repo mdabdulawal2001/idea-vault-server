@@ -10,6 +10,7 @@ const port = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 
+
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
@@ -76,6 +77,7 @@ async function run() {
     const db = client.db("ideaVaultDB");
     const ideasCollection = db.collection("ideas");
     const commentsCollection = db.collection("comments");
+    const usersCollection = db.collection("user");
 
     // Send a ping to confirm connection
     await client.db("admin").command({ ping: 1 });
@@ -174,6 +176,28 @@ async function run() {
         console.error("Error fetching ideas:", error);
         res.status(500).send({
           message: "Error fetching ideas",
+          error: error.message,
+        });
+      }
+    });
+
+    // get my ideas data
+    app.get("/my-ideas", verifyToken, async (req, res) => {
+      try {
+        const userId = req.user.sub;
+
+        const result = await ideasCollection
+          .find({ authorId: userId })
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        res.status(200).send(result);
+      } catch (error) {
+        console.error("Error fetching my ideas:", error);
+
+        res.status(500).send({
+          success: false,
+          message: "Error fetching your ideas",
           error: error.message,
         });
       }
@@ -283,7 +307,7 @@ async function run() {
     app.get("/comments/me", verifyToken, async (req, res) => {
       try {
         const userId = req.user.sub;
-
+        console.log(userId);
         const comments = await commentsCollection
           .find({ userId })
           .sort({ createdAt: -1 })
@@ -733,6 +757,213 @@ async function run() {
           success: false,
           message: "Error deleting idea",
           error: error.message,
+        });
+      }
+    });
+
+
+    // ==========================================
+    // GET PROFILE
+    // ==========================================
+
+    app.get("/profile", verifyToken, async (req, res) => {
+      try {
+        const userId = req.user.sub;
+
+        console.log("JWT USER:", req.user);
+        console.log("JWT SUB:", userId);
+        console.log("SUB TYPE:", typeof userId);
+
+        // ------------------------------------------
+        // CHECK USER ID
+        // ------------------------------------------
+
+        if (!userId) {
+          return res.status(401).send({
+            success: false,
+            message: "Unauthorized",
+          });
+        }
+
+        if (!ObjectId.isValid(userId)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid user ID",
+          });
+        }
+
+        // ------------------------------------------
+        // FIND USER
+        // ------------------------------------------
+
+        const user = await usersCollection.findOne({
+          _id: new ObjectId(userId),
+        });
+
+        if (!user) {
+          return res.status(404).send({
+            success: false,
+            message: "User profile not found",
+          });
+        }
+
+        // ------------------------------------------
+        // RESPONSE
+        // ------------------------------------------
+
+        return res.status(200).send({
+          success: true,
+          user,
+        });
+      } catch (error) {
+        console.error("GET PROFILE ERROR:", error);
+
+        return res.status(500).send({
+          success: false,
+          message: "Error fetching profile",
+        });
+      }
+    });
+
+    // ==========================================
+    // UPDATE PROFILE
+    // ==========================================
+
+    app.patch("/profile", verifyToken, async (req, res) => {
+      try {
+        const userId = req.user.sub;
+
+        console.log("UPDATE USER ID:", userId);
+
+        // ------------------------------------------
+        // CHECK USER ID
+        // ------------------------------------------
+
+        if (!userId) {
+          return res.status(401).send({
+            success: false,
+            message: "Unauthorized",
+          });
+        }
+
+        if (!ObjectId.isValid(userId)) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid user ID",
+          });
+        }
+
+        // ------------------------------------------
+        // REQUEST BODY
+        // ------------------------------------------
+
+        const { name, image } = req.body;
+
+        // ------------------------------------------
+        // VALIDATE NAME
+        // ------------------------------------------
+
+        if (name !== undefined) {
+          if (typeof name !== "string") {
+            return res.status(400).send({
+              success: false,
+              message: "Name must be a string",
+            });
+          }
+
+          if (!name.trim()) {
+            return res.status(400).send({
+              success: false,
+              message: "Name is required",
+            });
+          }
+
+          if (name.trim().length < 2) {
+            return res.status(400).send({
+              success: false,
+              message: "Name must be at least 2 characters",
+            });
+          }
+        }
+
+        // ------------------------------------------
+        // VALIDATE IMAGE
+        // ------------------------------------------
+
+        if (
+          image !== undefined &&
+          image !== null &&
+          typeof image !== "string"
+        ) {
+          return res.status(400).send({
+            success: false,
+            message: "Invalid image URL",
+          });
+        }
+
+        // ------------------------------------------
+        // PREPARE UPDATE DATA
+        // ------------------------------------------
+
+        const updateData = {
+          updatedAt: new Date(),
+        };
+
+        if (name !== undefined) {
+          updateData.name = name.trim();
+        }
+
+        if (image !== undefined) {
+          updateData.image = image?.trim() || null;
+        }
+
+        // ------------------------------------------
+        // UPDATE USER
+        // ------------------------------------------
+
+        const result = await usersCollection.updateOne(
+          {
+            _id: new ObjectId(userId),
+          },
+          {
+            $set: updateData,
+          },
+        );
+
+        // ------------------------------------------
+        // USER NOT FOUND
+        // ------------------------------------------
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "User profile not found",
+          });
+        }
+
+        // ------------------------------------------
+        // GET UPDATED USER
+        // ------------------------------------------
+
+        const updatedUser = await usersCollection.findOne({
+          _id: new ObjectId(userId),
+        });
+
+        // ------------------------------------------
+        // RESPONSE
+        // ------------------------------------------
+
+        return res.status(200).send({
+          success: true,
+          message: "Profile updated successfully",
+          user: updatedUser,
+        });
+      } catch (error) {
+        console.error("UPDATE PROFILE ERROR:", error);
+
+        return res.status(500).send({
+          success: false,
+          message: "Error updating profile",
         });
       }
     });
