@@ -71,7 +71,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server
-    await client.connect();
+    // await client.connect();
 
     // Database & Collections
     const db = client.db("ideaVaultDB");
@@ -265,7 +265,7 @@ async function run() {
       try {
         const { ideaId } = req.params;
 
-        // ================= ID VALIDATION =================
+        // ID VALIDATION 
 
         if (!ObjectId.isValid(ideaId)) {
           return res.status(400).send({
@@ -274,7 +274,7 @@ async function run() {
           });
         }
 
-        // ================= GET COMMENTS =================
+        // GET COMMENTS 
 
         const comments = await commentsCollection
           .find({
@@ -285,7 +285,7 @@ async function run() {
           })
           .toArray();
 
-        // ================= SUCCESS =================
+        // SUCCESS 
 
         res.status(200).send({
           success: true,
@@ -510,7 +510,7 @@ async function run() {
           authorPhoto,
         } = req.body;
         const authorId = req.user.sub;
-        // ================= VALIDATION =================
+        //  VALIDATION 
 
         if (
           !title?.trim() ||
@@ -528,7 +528,7 @@ async function run() {
           });
         }
 
-        // ================= NEW IDEA =================
+        // NEW IDEA 
 
         const newIdea = {
           title: title.trim(),
@@ -551,19 +551,19 @@ async function run() {
           problemStatement: problemStatement.trim(),
           proposedSolution: proposedSolution.trim(),
 
-          // ================= AUTHOR INFO =================
+          // AUTHOR INFO
 
           authorId: authorId,
           authorName: authorName?.trim() || "Unknown User",
           authorPhoto: authorPhoto || "",
 
-          // ================= TIMESTAMPS =================
+          //  TIMESTAMPS 
 
           createdAt: new Date(),
           updatedAt: new Date(),
         };
 
-        // ================= INSERT =================
+        // INSERT 
 
         const result = await ideasCollection.insertOne(newIdea);
 
@@ -592,7 +592,8 @@ async function run() {
       try {
         const { id } = req.params;
         const userId = req.user.sub;
-        // ================= ID VALIDATION =================
+
+        // ID VALIDATION 
 
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({
@@ -614,7 +615,7 @@ async function run() {
           proposedSolution,
         } = req.body;
 
-        // ================= VALIDATION =================
+        // VALIDATION 
 
         if (
           !title?.trim() ||
@@ -631,7 +632,7 @@ async function run() {
           });
         }
 
-        // ================= BUDGET VALIDATION =================
+        // BUDGET VALIDATION 
 
         if (
           estimatedBudget !== null &&
@@ -645,7 +646,7 @@ async function run() {
           });
         }
 
-        // ================= UPDATE DATA =================
+        // UPDATE DATA 
 
         const updatedIdea = {
           title: title.trim(),
@@ -671,7 +672,7 @@ async function run() {
           updatedAt: new Date(),
         };
 
-        // ================= UPDATE =================
+        // UPDATE 
 
         const result = await ideasCollection.updateOne(
           {
@@ -683,7 +684,7 @@ async function run() {
           },
         );
 
-        // ================= NOT FOUND =================
+        // NOT FOUND 
 
         if (result.matchedCount === 0) {
           return res.status(404).send({
@@ -692,7 +693,7 @@ async function run() {
           });
         }
 
-        // ================= SUCCESS =================
+        // SUCCESS 
 
         res.status(200).send({
           success: true,
@@ -718,7 +719,8 @@ async function run() {
       try {
         const { id } = req.params;
         const userId = req.user.sub;
-        // ================= ID VALIDATION =================
+
+        //  ID VALIDATION 
 
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({
@@ -727,14 +729,14 @@ async function run() {
           });
         }
 
-        // ================= DELETE =================
+        // DELETE 
 
         const result = await ideasCollection.deleteOne({
           _id: new ObjectId(id),
           authorId: userId,
         });
 
-        // ================= NOT FOUND =================
+        // NOT FOUND 
 
         if (result.deletedCount === 0) {
           return res.status(404).send({
@@ -743,7 +745,7 @@ async function run() {
           });
         }
 
-        // ================= SUCCESS =================
+        // SUCCESS 
 
         res.status(200).send({
           success: true,
@@ -762,9 +764,8 @@ async function run() {
     });
 
 
-    // ==========================================
+
     // GET PROFILE
-    // ==========================================
 
     app.get("/profile", verifyToken, async (req, res) => {
       try {
@@ -774,9 +775,7 @@ async function run() {
         console.log("JWT SUB:", userId);
         console.log("SUB TYPE:", typeof userId);
 
-        // ------------------------------------------
         // CHECK USER ID
-        // ------------------------------------------
 
         if (!userId) {
           return res.status(401).send({
@@ -792,9 +791,7 @@ async function run() {
           });
         }
 
-        // ------------------------------------------
         // FIND USER
-        // ------------------------------------------
 
         const user = await usersCollection.findOne({
           _id: new ObjectId(userId),
@@ -806,10 +803,7 @@ async function run() {
             message: "User profile not found",
           });
         }
-
-        // ------------------------------------------
         // RESPONSE
-        // ------------------------------------------
 
         return res.status(200).send({
           success: true,
@@ -825,9 +819,7 @@ async function run() {
       }
     });
 
-    // ==========================================
     // UPDATE PROFILE
-    // ==========================================
 
     app.patch("/profile", verifyToken, async (req, res) => {
       try {
@@ -835,9 +827,7 @@ async function run() {
 
         console.log("UPDATE USER ID:", userId);
 
-        // ------------------------------------------
         // CHECK USER ID
-        // ------------------------------------------
 
         if (!userId) {
           return res.status(401).send({
@@ -853,15 +843,12 @@ async function run() {
           });
         }
 
-        // ------------------------------------------
+
         // REQUEST BODY
-        // ------------------------------------------
 
         const { name, image } = req.body;
 
-        // ------------------------------------------
         // VALIDATE NAME
-        // ------------------------------------------
 
         if (name !== undefined) {
           if (typeof name !== "string") {
@@ -886,9 +873,7 @@ async function run() {
           }
         }
 
-        // ------------------------------------------
         // VALIDATE IMAGE
-        // ------------------------------------------
 
         if (
           image !== undefined &&
@@ -901,9 +886,7 @@ async function run() {
           });
         }
 
-        // ------------------------------------------
         // PREPARE UPDATE DATA
-        // ------------------------------------------
 
         const updateData = {
           updatedAt: new Date(),
@@ -917,9 +900,8 @@ async function run() {
           updateData.image = image?.trim() || null;
         }
 
-        // ------------------------------------------
+
         // UPDATE USER
-        // ------------------------------------------
 
         const result = await usersCollection.updateOne(
           {
@@ -930,9 +912,8 @@ async function run() {
           },
         );
 
-        // ------------------------------------------
         // USER NOT FOUND
-        // ------------------------------------------
+
 
         if (result.matchedCount === 0) {
           return res.status(404).send({
@@ -941,17 +922,12 @@ async function run() {
           });
         }
 
-        // ------------------------------------------
+
         // GET UPDATED USER
-        // ------------------------------------------
 
         const updatedUser = await usersCollection.findOne({
           _id: new ObjectId(userId),
         });
-
-        // ------------------------------------------
-        // RESPONSE
-        // ------------------------------------------
 
         return res.status(200).send({
           success: true,
