@@ -951,6 +951,6 @@ async function run() {
 run().catch(console.dir);
 
 // Listener
-// app.listen(port, () => {
-//   console.log(`Server is running on port ${port}`);
-// });
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
