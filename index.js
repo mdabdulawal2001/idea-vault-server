@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
-const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
+const BETTER_AUTH_URL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -80,7 +80,7 @@ async function run() {
     const usersCollection = db.collection("user");
 
     // Send a ping to confirm connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
 
     //  HELPER FUNCTION
@@ -951,6 +951,6 @@ async function run() {
 run().catch(console.dir);
 
 // Listener
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`Server is running on port ${port}`);
+// });
