@@ -770,9 +770,9 @@ async function run() {
       try {
         const userId = req.user.sub;
 
-        console.log("JWT USER:", req.user);
-        console.log("JWT SUB:", userId);
-        console.log("SUB TYPE:", typeof userId);
+        // console.log("JWT USER:", req.user);
+        // console.log("JWT SUB:", userId);
+        // console.log("SUB TYPE:", typeof userId);
 
         // CHECK USER ID
 
@@ -945,7 +945,8 @@ async function run() {
 
 run().catch(console.dir);
 
+module.exports = app;
 // Listener
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`Server is running on port ${port}`);
+// });
