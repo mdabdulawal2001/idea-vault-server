@@ -6,16 +6,16 @@ require("dotenv").config();
 
 const app = express();
 
-// ======================================================
+
 // ENVIRONMENT VARIABLES
-// ======================================================
+
 
 const uri = process.env.MONGODB_URI;
 const BETTER_AUTH_URL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 
-// ======================================================
+
 // BASIC VALIDATION
-// ======================================================
+
 
 if (!uri) {
   console.error("❌ MONGODB_URI is missing");
@@ -25,9 +25,9 @@ if (!BETTER_AUTH_URL) {
   console.error("❌ BETTER_AUTH_URL is missing");
 }
 
-// ======================================================
+
 // MIDDLEWARE
-// ======================================================
+
 
 app.use(
   cors({
@@ -38,9 +38,9 @@ app.use(
 
 app.use(express.json());
 
-// ======================================================
+
 // MONGODB
-// ======================================================
+
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -85,9 +85,8 @@ async function connectDB() {
   return dbConnectionPromise;
 }
 
-// ======================================================
+
 // DATABASE COLLECTIONS
-// ======================================================
 
 async function getCollections() {
   const database = await connectDB();
@@ -99,9 +98,9 @@ async function getCollections() {
   };
 }
 
-// ======================================================
+
 // BETTER AUTH JWKS
-// ======================================================
+
 
 let JWKS = null;
 
@@ -119,9 +118,9 @@ function getJWKS() {
   return JWKS;
 }
 
-// ======================================================
+
 // VERIFY TOKEN MIDDLEWARE
-// ======================================================
+
 
 const verifyToken = async (req, res, next) => {
   const authHeader =
@@ -174,9 +173,9 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// ======================================================
+
 // ROOT ROUTE
-// ======================================================
+
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -185,10 +184,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// ======================================================
+
 // GET ALL IDEAS
 // SEARCH + FILTER + DATE RANGE
-// ======================================================
+
 
 app.get("/ideas", async (req, res) => {
   try {
@@ -256,9 +255,9 @@ app.get("/ideas", async (req, res) => {
   }
 });
 
-// ======================================================
+
 // GET MY IDEAS
-// ======================================================
+
 
 app.get("/my-ideas", verifyToken, async (req, res) => {
   try {
@@ -283,9 +282,9 @@ app.get("/my-ideas", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // POST COMMENT
-// ======================================================
+
 
 app.post("/comments", verifyToken, async (req, res) => {
   try {
@@ -352,9 +351,9 @@ app.post("/comments", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // GET COMMENTS BY IDEA ID
-// ======================================================
+
 
 app.get("/comments/idea/:ideaId", async (req, res) => {
   try {
@@ -393,9 +392,9 @@ app.get("/comments/idea/:ideaId", async (req, res) => {
   }
 });
 
-// ======================================================
+
 // GET MY COMMENTS
-// ======================================================
+
 
 app.get("/comments/me", verifyToken, async (req, res) => {
   try {
@@ -423,9 +422,9 @@ app.get("/comments/me", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // UPDATE COMMENT
-// ======================================================
+
 
 app.patch("/comments/:id", verifyToken, async (req, res) => {
   try {
@@ -494,9 +493,9 @@ app.patch("/comments/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // DELETE COMMENT
-// ======================================================
+
 
 app.delete("/comments/:id", verifyToken, async (req, res) => {
   try {
@@ -544,9 +543,8 @@ app.delete("/comments/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // GET CATEGORIES
-// ======================================================
 
 app.get("/idea-categories", async (req, res) => {
   try {
@@ -567,9 +565,9 @@ app.get("/idea-categories", async (req, res) => {
   }
 });
 
-// ======================================================
+
 // GET SINGLE IDEA
-// ======================================================
+
 
 app.get("/ideas/:id", verifyToken, async (req, res) => {
   try {
@@ -607,9 +605,9 @@ app.get("/ideas/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // TRENDING IDEAS
-// ======================================================
+
 
 app.get("/trending", async (req, res) => {
   try {
@@ -633,9 +631,9 @@ app.get("/trending", async (req, res) => {
   }
 });
 
-// ======================================================
+
 // CREATE NEW IDEA
-// ======================================================
+
 
 app.post("/ideas", verifyToken, async (req, res) => {
   try {
@@ -726,9 +724,9 @@ app.post("/ideas", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // UPDATE IDEA
-// ======================================================
+
 
 app.patch("/ideas/:id", verifyToken, async (req, res) => {
   try {
@@ -844,9 +842,9 @@ app.patch("/ideas/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // DELETE IDEA
-// ======================================================
+
 
 app.delete("/ideas/:id", verifyToken, async (req, res) => {
   try {
@@ -890,9 +888,9 @@ app.delete("/ideas/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // GET PROFILE
-// ======================================================
+
 
 app.get("/profile", verifyToken, async (req, res) => {
   try {
@@ -942,9 +940,9 @@ app.get("/profile", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // UPDATE PROFILE
-// ======================================================
+
 
 app.patch("/profile", verifyToken, async (req, res) => {
   try {
@@ -1053,9 +1051,9 @@ app.patch("/profile", verifyToken, async (req, res) => {
   }
 });
 
-// ======================================================
+
 // 404 ROUTE
-// ======================================================
+
 
 app.use((req, res) => {
   res.status(404).json({
@@ -1065,9 +1063,8 @@ app.use((req, res) => {
   });
 });
 
-// ======================================================
+
 // ERROR HANDLER
-// ======================================================
 
 app.use((error, req, res, next) => {
   console.error("Unhandled Server Error:", error);
@@ -1079,8 +1076,8 @@ app.use((error, req, res, next) => {
   });
 });
 
-// ======================================================
+
 // VERCEL EXPORT
-// ======================================================
+
 
 module.exports = app;
