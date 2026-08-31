@@ -10,7 +10,6 @@ const port = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 
-
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
@@ -116,7 +115,14 @@ async function run() {
     await convertStringDatesToISODate();
 
     // ================= ROUTES =================
+    // Server Main File (index.js / app.js)
 
+    app.get("/", (req, res) => {
+      res.status(200).json({
+        message: "Server is running smoothly!",
+        status: "Active",
+      });
+    });
     // Get ideas with Search, Filter & Date Range
     app.get("/ideas", async (req, res) => {
       const {
@@ -260,7 +266,7 @@ async function run() {
       try {
         const { ideaId } = req.params;
 
-        // ID VALIDATION 
+        // ID VALIDATION
 
         if (!ObjectId.isValid(ideaId)) {
           return res.status(400).send({
@@ -269,7 +275,7 @@ async function run() {
           });
         }
 
-        // GET COMMENTS 
+        // GET COMMENTS
 
         const comments = await commentsCollection
           .find({
@@ -280,7 +286,7 @@ async function run() {
           })
           .toArray();
 
-        // SUCCESS 
+        // SUCCESS
 
         res.status(200).send({
           success: true,
@@ -505,7 +511,7 @@ async function run() {
           authorPhoto,
         } = req.body;
         const authorId = req.user.sub;
-        //  VALIDATION 
+        //  VALIDATION
 
         if (
           !title?.trim() ||
@@ -523,7 +529,7 @@ async function run() {
           });
         }
 
-        // NEW IDEA 
+        // NEW IDEA
 
         const newIdea = {
           title: title.trim(),
@@ -552,13 +558,13 @@ async function run() {
           authorName: authorName?.trim() || "Unknown User",
           authorPhoto: authorPhoto || "",
 
-          //  TIMESTAMPS 
+          //  TIMESTAMPS
 
           createdAt: new Date(),
           updatedAt: new Date(),
         };
 
-        // INSERT 
+        // INSERT
 
         const result = await ideasCollection.insertOne(newIdea);
 
@@ -588,7 +594,7 @@ async function run() {
         const { id } = req.params;
         const userId = req.user.sub;
 
-        // ID VALIDATION 
+        // ID VALIDATION
 
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({
@@ -610,7 +616,7 @@ async function run() {
           proposedSolution,
         } = req.body;
 
-        // VALIDATION 
+        // VALIDATION
 
         if (
           !title?.trim() ||
@@ -627,7 +633,7 @@ async function run() {
           });
         }
 
-        // BUDGET VALIDATION 
+        // BUDGET VALIDATION
 
         if (
           estimatedBudget !== null &&
@@ -641,7 +647,7 @@ async function run() {
           });
         }
 
-        // UPDATE DATA 
+        // UPDATE DATA
 
         const updatedIdea = {
           title: title.trim(),
@@ -667,7 +673,7 @@ async function run() {
           updatedAt: new Date(),
         };
 
-        // UPDATE 
+        // UPDATE
 
         const result = await ideasCollection.updateOne(
           {
@@ -679,7 +685,7 @@ async function run() {
           },
         );
 
-        // NOT FOUND 
+        // NOT FOUND
 
         if (result.matchedCount === 0) {
           return res.status(404).send({
@@ -688,7 +694,7 @@ async function run() {
           });
         }
 
-        // SUCCESS 
+        // SUCCESS
 
         res.status(200).send({
           success: true,
@@ -715,7 +721,7 @@ async function run() {
         const { id } = req.params;
         const userId = req.user.sub;
 
-        //  ID VALIDATION 
+        //  ID VALIDATION
 
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({
@@ -724,14 +730,14 @@ async function run() {
           });
         }
 
-        // DELETE 
+        // DELETE
 
         const result = await ideasCollection.deleteOne({
           _id: new ObjectId(id),
           authorId: userId,
         });
 
-        // NOT FOUND 
+        // NOT FOUND
 
         if (result.deletedCount === 0) {
           return res.status(404).send({
@@ -740,7 +746,7 @@ async function run() {
           });
         }
 
-        // SUCCESS 
+        // SUCCESS
 
         res.status(200).send({
           success: true,
@@ -757,8 +763,6 @@ async function run() {
         });
       }
     });
-
-
 
     // GET PROFILE
 
@@ -838,7 +842,6 @@ async function run() {
           });
         }
 
-
         // REQUEST BODY
 
         const { name, image } = req.body;
@@ -895,7 +898,6 @@ async function run() {
           updateData.image = image?.trim() || null;
         }
 
-
         // UPDATE USER
 
         const result = await usersCollection.updateOne(
@@ -909,14 +911,12 @@ async function run() {
 
         // USER NOT FOUND
 
-
         if (result.matchedCount === 0) {
           return res.status(404).send({
             success: false,
             message: "User profile not found",
           });
         }
-
 
         // GET UPDATED USER
 
