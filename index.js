@@ -118,7 +118,7 @@ async function run() {
     // ================= ROUTES =================
 
     // Root API
-    app.get("/", (req, res) => {
+    app.get("/ideas", (req, res) => {
       res.send("IdeaVault Server is running...");
     });
 
