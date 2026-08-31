@@ -9,7 +9,6 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
@@ -70,7 +69,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server
-    await client.connect();
+    // await client.connect();
 
     // Database & Collections
     const db = client.db("ideaVaultDB");
