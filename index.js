@@ -70,7 +70,7 @@ const verifyToken = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server
-    // await client.connect();
+    await client.connect();
 
     // Database & Collections
     const db = client.db("ideaVaultDB");
