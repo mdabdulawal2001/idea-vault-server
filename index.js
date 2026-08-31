@@ -117,11 +117,6 @@ async function run() {
 
     // ================= ROUTES =================
 
-    // Root API
-    app.get("/ideas", (req, res) => {
-      res.send("IdeaVault Server is running...");
-    });
-
     // Get ideas with Search, Filter & Date Range
     app.get("/ideas", async (req, res) => {
       const {
