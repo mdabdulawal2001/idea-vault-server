@@ -80,7 +80,7 @@ async function run() {
 
     // Send a ping to confirm connection
     // await client.db("admin").command({ ping: 1 });
-    console.log("Successfully connected to MongoDB!");
+    // console.log("Successfully connected to MongoDB!");
 
     //  HELPER FUNCTION
     async function convertStringDatesToISODate() {
